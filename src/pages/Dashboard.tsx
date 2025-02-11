@@ -22,25 +22,25 @@ const Dashboard = () => {
     queryKey: ["dashboard-metrics"],
     queryFn: async (): Promise<DashboardMetrics> => {
       const [
-        { data: employeeData },
-        { data: clientData },
-        { data: projectData },
-        { data: leaveRequestData },
-        { data: loanRequestData },
+        { count: employeeCount },
+        { count: clientCount },
+        { count: projectCount },
+        { count: leaveRequestCount },
+        { count: loanRequestCount },
       ] = await Promise.all([
-        supabase.from("employees").select("*", { count: "exact", head: true }),
-        supabase.from("clients").select("*", { count: "exact", head: true }),
-        supabase.from("projects").select("*", { count: "exact", head: true }),
-        supabase.from("leave_requests").select("*", { count: "exact", head: true }).eq("status", "pending"),
-        supabase.from("loan_requests").select("*", { count: "exact", head: true }).eq("status", "pending"),
+        supabase.from("employees").select("*", { count: "exact" }),
+        supabase.from("clients").select("*", { count: "exact" }),
+        supabase.from("projects").select("*", { count: "exact" }),
+        supabase.from("leave_requests").select("*", { count: "exact" }).eq("status", "pending"),
+        supabase.from("loan_requests").select("*", { count: "exact" }).eq("status", "pending"),
       ]);
 
       return {
-        totalEmployees: employeeData?.count || 0,
-        totalClients: clientData?.count || 0,
-        totalProjects: projectData?.count || 0,
-        pendingLeaveRequests: leaveRequestData?.count || 0,
-        pendingLoanRequests: loanRequestData?.count || 0,
+        totalEmployees: employeeCount || 0,
+        totalClients: clientCount || 0,
+        totalProjects: projectCount || 0,
+        pendingLeaveRequests: leaveRequestCount || 0,
+        pendingLoanRequests: loanRequestCount || 0,
       };
     },
     enabled: isSuperAdmin,
