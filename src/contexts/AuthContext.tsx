@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -35,14 +34,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const fetchUserData = async (userId: string) => {
     try {
-      // Fetch user profile
       const { data: profile } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", userId)
         .single();
 
-      // Fetch user roles
       const { data: roleData } = await supabase
         .from("user_roles")
         .select("role")
@@ -58,7 +55,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   useEffect(() => {
-    // Check active sessions and sets the user
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         fetchUserData(session.user.id).then(({ profile, roles }) => {
@@ -138,10 +134,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           },
         },
       });
-      if (error) throw error;
+      if (error) {
+        if (error.message.includes("User already registered")) {
+          toast.error("This email is already registered. Please try signing in instead.");
+        } else {
+          toast.error(error.message || "Error signing up");
+        }
+        throw error;
+      }
       toast.success("Registration successful! Please check your email to verify your account.");
     } catch (error: any) {
-      toast.error(error.message || "Error signing up");
+      if (!error.message.includes("User already registered")) {
+        toast.error(error.message || "Error signing up");
+      }
       throw error;
     }
   };
