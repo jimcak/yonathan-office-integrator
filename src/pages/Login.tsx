@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Loader2 } from "lucide-react";
 
 const Login = () => {
   const { signIn, signUp, user } = useAuth();
@@ -78,6 +79,7 @@ const Login = () => {
                       setFormData({ ...formData, email: e.target.value })
                     }
                     required
+                    disabled={isLoading}
                   />
                   <Input
                     type="password"
@@ -87,9 +89,17 @@ const Login = () => {
                       setFormData({ ...formData, password: e.target.value })
                     }
                     required
+                    disabled={isLoading}
                   />
                   <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? "Memproses..." : "Masuk"}
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Memproses...
+                      </>
+                    ) : (
+                      "Masuk"
+                    )}
                   </Button>
                 </form>
               </TabsContent>
@@ -102,6 +112,7 @@ const Login = () => {
                       setFormData({ ...formData, firstName: e.target.value })
                     }
                     required
+                    disabled={isLoading}
                   />
                   <Input
                     placeholder="Nama Belakang"
@@ -110,6 +121,7 @@ const Login = () => {
                       setFormData({ ...formData, lastName: e.target.value })
                     }
                     required
+                    disabled={isLoading}
                   />
                   <Input
                     type="email"
@@ -119,6 +131,7 @@ const Login = () => {
                       setFormData({ ...formData, email: e.target.value })
                     }
                     required
+                    disabled={isLoading}
                   />
                   <Input
                     type="password"
@@ -128,9 +141,17 @@ const Login = () => {
                       setFormData({ ...formData, password: e.target.value })
                     }
                     required
+                    disabled={isLoading}
                   />
                   <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? "Memproses..." : "Daftar"}
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Memproses...
+                      </>
+                    ) : (
+                      "Daftar"
+                    )}
                   </Button>
                 </form>
               </TabsContent>

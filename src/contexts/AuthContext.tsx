@@ -1,5 +1,6 @@
+
 import { createContext, useContext, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { UserProfile, UserRole } from "@/types/auth";
 import { toast } from "sonner";
@@ -25,6 +26,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [authState, setAuthState] = useState<AuthState>({
     user: null,
     profile: null,
@@ -67,6 +69,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             roles,
             isLoading: false,
           });
+          
+          // Redirect to dashboard if on login page
+          if (location.pathname === '/login') {
+            navigate('/dashboard');
+          }
         });
       } else {
         setAuthState((prev) => ({ ...prev, isLoading: false }));
@@ -76,7 +83,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
+      if (event === 'SIGNED_IN' && session?.user) {
         const { profile, roles } = await fetchUserData(session.user.id);
         setAuthState({
           user: {
@@ -87,21 +94,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           roles,
           isLoading: false,
         });
-      } else {
+        navigate('/dashboard');
+      } else if (event === 'SIGNED_OUT') {
         setAuthState({
           user: null,
           profile: null,
           roles: [],
           isLoading: false,
         });
-        navigate("/login");
+        navigate('/login');
       }
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [navigate]);
+  }, [navigate, location.pathname]);
 
   const signIn = async (email: string, password: string) => {
     try {
@@ -110,9 +118,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         password,
       });
       if (error) throw error;
-      navigate("/dashboard");
     } catch (error: any) {
-      toast.error(error.message || "Error signing in");
+      toast.error(error.message || "Error saat login");
       throw error;
     }
   };
@@ -136,16 +143,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       });
       if (error) {
         if (error.message.includes("User already registered")) {
-          toast.error("This email is already registered. Please try signing in instead.");
+          toast.error("Email sudah terdaftar. Silakan login.");
         } else {
-          toast.error(error.message || "Error signing up");
+          toast.error(error.message || "Error saat mendaftar");
         }
         throw error;
       }
-      toast.success("Registration successful! Please check your email to verify your account.");
+      toast.success("Pendaftaran berhasil! Silakan cek email Anda untuk verifikasi.");
     } catch (error: any) {
       if (!error.message.includes("User already registered")) {
-        toast.error(error.message || "Error signing up");
+        toast.error(error.message || "Error saat mendaftar");
       }
       throw error;
     }
@@ -156,7 +163,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
     } catch (error: any) {
-      toast.error(error.message || "Error signing out");
+      toast.error(error.message || "Error saat logout");
       throw error;
     }
   };
