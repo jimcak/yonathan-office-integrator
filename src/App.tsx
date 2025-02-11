@@ -9,6 +9,7 @@ import MainLayout from "./components/layout/MainLayout";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
+import Dashboard from "./pages/Dashboard";
 
 const queryClient = new QueryClient();
 
@@ -24,7 +25,7 @@ const App = () => (
             <Route element={<ProtectedRoute />}>
               <Route path="/" element={<MainLayout />}>
                 <Route index element={<Navigate to="/dashboard" replace />} />
-                <Route path="dashboard" element={<div>Dashboard Coming Soon</div>} />
+                <Route path="dashboard" element={<Dashboard />} />
                 <Route path="employees" element={<div>Employees Coming Soon</div>} />
                 <Route path="attendance" element={<div>Attendance Coming Soon</div>} />
                 <Route path="time-report" element={<div>Time Report Coming Soon</div>} />
