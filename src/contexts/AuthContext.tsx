@@ -57,9 +57,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        fetchUserData(session.user.id).then(({ profile, roles }) => {
+    let isMounted = true;
+
+    const initializeAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session?.user && isMounted) {
+          const { profile, roles } = await fetchUserData(session.user.id);
           setAuthState({
             user: {
               id: session.user.id,
@@ -70,19 +75,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             isLoading: false,
           });
           
-          // Redirect to dashboard if on login page
           if (location.pathname === '/login') {
             navigate('/dashboard');
           }
-        });
-      } else {
-        setAuthState((prev) => ({ ...prev, isLoading: false }));
+        } else if (isMounted) {
+          setAuthState(prev => ({ ...prev, isLoading: false }));
+        }
+      } catch (error) {
+        console.error("Error initializing auth:", error);
+        if (isMounted) {
+          setAuthState(prev => ({ ...prev, isLoading: false }));
+        }
       }
-    });
+    };
+
+    initializeAuth();
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!isMounted) return;
+
       if (event === 'SIGNED_IN' && session?.user) {
         const { profile, roles } = await fetchUserData(session.user.id);
         setAuthState({
@@ -107,6 +120,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     });
 
     return () => {
+      isMounted = false;
       subscription.unsubscribe();
     };
   }, [navigate, location.pathname]);
