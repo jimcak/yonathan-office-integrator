@@ -9,8 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
 
 const Login = () => {
-  const { signIn, signUp, user } = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
+  const { signIn, signUp, user, isLoading } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -18,26 +18,44 @@ const Login = () => {
     lastName: "",
   });
 
+  // Debug log untuk memeriksa status auth
+  console.log("Login page:", { user, isLoading, isSubmitting });
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-gray-500 mx-auto mb-2" />
+          <p className="text-gray-600">Memeriksa status login...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (user) {
+    console.log("User already logged in, redirecting to dashboard");
     return <Navigate to="/dashboard" replace />;
   }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    setIsSubmitting(true);
     try {
+      console.log("Attempting login...");
       await signIn(formData.email, formData.password);
     } catch (error) {
       // Error is handled in AuthContext
+      console.log("Login failed:", error);
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    setIsSubmitting(true);
     try {
+      console.log("Attempting signup...");
       await signUp(
         formData.email,
         formData.password,
@@ -46,8 +64,9 @@ const Login = () => {
       );
     } catch (error) {
       // Error is handled in AuthContext
+      console.log("Signup failed:", error);
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -79,7 +98,7 @@ const Login = () => {
                       setFormData({ ...formData, email: e.target.value })
                     }
                     required
-                    disabled={isLoading}
+                    disabled={isSubmitting}
                   />
                   <Input
                     type="password"
@@ -89,10 +108,10 @@ const Login = () => {
                       setFormData({ ...formData, password: e.target.value })
                     }
                     required
-                    disabled={isLoading}
+                    disabled={isSubmitting}
                   />
-                  <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? (
+                  <Button type="submit" className="w-full" disabled={isSubmitting}>
+                    {isSubmitting ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Memproses...
@@ -112,7 +131,7 @@ const Login = () => {
                       setFormData({ ...formData, firstName: e.target.value })
                     }
                     required
-                    disabled={isLoading}
+                    disabled={isSubmitting}
                   />
                   <Input
                     placeholder="Nama Belakang"
@@ -121,7 +140,7 @@ const Login = () => {
                       setFormData({ ...formData, lastName: e.target.value })
                     }
                     required
-                    disabled={isLoading}
+                    disabled={isSubmitting}
                   />
                   <Input
                     type="email"
@@ -131,7 +150,7 @@ const Login = () => {
                       setFormData({ ...formData, email: e.target.value })
                     }
                     required
-                    disabled={isLoading}
+                    disabled={isSubmitting}
                   />
                   <Input
                     type="password"
@@ -141,10 +160,10 @@ const Login = () => {
                       setFormData({ ...formData, password: e.target.value })
                     }
                     required
-                    disabled={isLoading}
+                    disabled={isSubmitting}
                   />
-                  <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? (
+                  <Button type="submit" className="w-full" disabled={isSubmitting}>
+                    {isSubmitting ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Memproses...
