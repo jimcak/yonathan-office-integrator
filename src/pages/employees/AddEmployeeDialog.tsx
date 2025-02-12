@@ -30,7 +30,6 @@ const AddEmployeeDialog = ({
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
-    email: "",
     phone: "",
     employeeId: "",
     position: "",
@@ -45,34 +44,23 @@ const AddEmployeeDialog = ({
 
     setIsLoading(true);
     try {
-      // First create auth user
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: formData.email,
-        password: "password123", // Default password
-        options: {
-          data: {
-            first_name: formData.firstName,
-            last_name: formData.lastName,
-          },
-        },
-      });
-
-      if (authError) throw authError;
-      if (!authData.user) throw new Error("No user data returned");
-
-      // Update the profile
-      const { error: profileError } = await supabase
+      // Create profile first
+      const { data: profileData, error: profileError } = await supabase
         .from("profiles")
-        .update({
+        .insert({
+          first_name: formData.firstName,
+          last_name: formData.lastName,
           phone: formData.phone,
         })
-        .eq("id", authData.user.id);
+        .select()
+        .single();
 
       if (profileError) throw profileError;
+      if (!profileData) throw new Error("No profile data returned");
 
       // Create employee record
       const { error: employeeError } = await supabase.from("employees").insert({
-        profile_id: authData.user.id,
+        profile_id: profileData.id,
         employee_id: formData.employeeId,
         position: formData.position,
         department: formData.department,
@@ -88,7 +76,6 @@ const AddEmployeeDialog = ({
       setFormData({
         firstName: "",
         lastName: "",
-        email: "",
         phone: "",
         employeeId: "",
         position: "",
@@ -97,6 +84,7 @@ const AddEmployeeDialog = ({
         salary: "",
       });
     } catch (error: any) {
+      console.error("Error adding employee:", error);
       toast.error(error.message || "Error menambahkan karyawan");
     } finally {
       setIsLoading(false);
@@ -133,19 +121,6 @@ const AddEmployeeDialog = ({
                 required
               />
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={formData.email}
-              onChange={(e) =>
-                setFormData({ ...formData, email: e.target.value })
-              }
-              required
-            />
           </div>
 
           <div className="space-y-2">
