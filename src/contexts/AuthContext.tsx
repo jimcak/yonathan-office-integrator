@@ -1,5 +1,4 @@
-
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { UserProfile, UserRole } from "@/types/auth";
@@ -34,62 +33,69 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     isLoading: true,
   });
 
-  const fetchUserData = async (userId: string) => {
+  // Memoize fetchUserData untuk menghindari re-render yang tidak perlu
+  const fetchUserData = useCallback(async (userId: string) => {
     try {
       console.log("Fetching user data for ID:", userId);
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", userId)
-        .single();
+      
+      // Gunakan Promise.all untuk fetch profile dan roles secara parallel
+      const [profileResult, rolesResult] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", userId)
+          .single(),
+        supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", userId)
+      ]);
 
-      if (profileError) {
-        console.error("Error fetching profile:", profileError);
+      if (profileResult.error) {
+        console.error("Error fetching profile:", profileResult.error);
         return { profile: null, roles: [] };
       }
 
-      console.log("Profile fetched successfully:", profile);
-
-      const { data: roleData, error: roleError } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", userId);
-
-      if (roleError) {
-        console.error("Error fetching roles:", roleError);
-        return { profile, roles: [] };
+      if (rolesResult.error) {
+        console.error("Error fetching roles:", rolesResult.error);
+        return { profile: profileResult.data, roles: [] };
       }
 
-      console.log("Roles fetched successfully:", roleData);
-
-      const roles = roleData?.map((r) => r.role as UserRole) || [];
-      return { profile, roles };
+      const roles = rolesResult.data?.map((r) => r.role as UserRole) || [];
+      return { profile: profileResult.data, roles };
     } catch (error) {
       console.error("Error in fetchUserData:", error);
       return { profile: null, roles: [] };
     }
-  };
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
+    let retryCount = 0;
+    const MAX_RETRIES = 3;
+    const RETRY_DELAY = 1000; // 1 second
 
     const initializeAuth = async () => {
       try {
-        console.log("Initializing auth...");
+        if (retryCount >= MAX_RETRIES) {
+          console.error("Max retries reached, stopping auth initialization");
+          if (isMounted) {
+            setAuthState(prev => ({ ...prev, isLoading: false }));
+            toast.error("Gagal memuat data. Silakan refresh halaman.");
+          }
+          return;
+        }
+
+        console.log("Initializing auth... (attempt", retryCount + 1, "of", MAX_RETRIES, ")");
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError) {
-          console.error("Error getting session:", sessionError);
-          if (isMounted) {
-            setAuthState(prev => ({ ...prev, isLoading: false }));
-          }
-          return;
+          throw sessionError;
         }
 
         if (!isMounted) return;
 
         if (session?.user) {
-          console.log("Session found, user:", session.user.email);
           const { profile, roles } = await fetchUserData(session.user.id);
           
           if (isMounted) {
@@ -103,21 +109,33 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               isLoading: false,
             });
 
+            // Hanya redirect ke dashboard jika user berada di halaman login
             if (location.pathname === '/login') {
               navigate('/dashboard');
             }
           }
         } else {
-          console.log("No session found");
           if (isMounted) {
             setAuthState(prev => ({ ...prev, isLoading: false }));
+            // Redirect ke login jika tidak ada session dan bukan di halaman login
+            if (location.pathname !== '/login') {
+              navigate('/login');
+            }
           }
         }
       } catch (error) {
         console.error("Error in initializeAuth:", error);
+        retryCount++;
+        
         if (isMounted) {
-          setAuthState(prev => ({ ...prev, isLoading: false }));
-          toast.error("Terjadi kesalahan saat memuat data");
+          // Jika masih ada retry tersisa, coba lagi setelah delay
+          if (retryCount < MAX_RETRIES) {
+            console.log("Retrying in", RETRY_DELAY, "ms...");
+            setTimeout(initializeAuth, RETRY_DELAY);
+          } else {
+            setAuthState(prev => ({ ...prev, isLoading: false }));
+            toast.error("Terjadi kesalahan saat memuat data");
+          }
         }
       }
     };
@@ -133,7 +151,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       try {
         if (event === 'SIGNED_IN' && session?.user) {
-          console.log("User signed in:", session.user.email);
           const { profile, roles } = await fetchUserData(session.user.id);
           
           setAuthState({
@@ -148,7 +165,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           
           navigate('/dashboard');
         } else if (event === 'SIGNED_OUT') {
-          console.log("User signed out");
           setAuthState({
             user: null,
             profile: null,
@@ -169,7 +185,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       isMounted = false;
       subscription.unsubscribe();
     };
-  }, [navigate, location.pathname]);
+  }, [navigate, location.pathname, fetchUserData]);
 
   const signIn = async (email: string, password: string) => {
     try {
