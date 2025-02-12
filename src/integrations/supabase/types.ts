@@ -514,6 +514,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      gen_random_uuid: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
