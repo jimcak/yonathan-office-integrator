@@ -44,10 +44,17 @@ const AddEmployeeDialog = ({
 
     setIsLoading(true);
     try {
-      // Create profile first
+      // Generate UUID for profile
+      const { data: uuidData, error: uuidError } = await supabase.rpc('gen_random_uuid');
+      if (uuidError) throw uuidError;
+
+      const profileId = uuidData;
+
+      // Create profile with generated UUID
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
         .insert({
+          id: profileId,
           first_name: formData.firstName,
           last_name: formData.lastName,
           phone: formData.phone,
