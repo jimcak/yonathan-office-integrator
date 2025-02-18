@@ -31,9 +31,11 @@ type TimeReport = {
   project_id: string;
   hours_worked: number;
   description: string;
-  project: {
-    name: string;
-  };
+};
+
+type Project = {
+  id: string;
+  name: string;
 };
 
 const TimeReportPage = () => {
@@ -45,12 +47,12 @@ const TimeReportPage = () => {
   const [description, setDescription] = useState("");
   const queryClient = useQueryClient();
 
-  const { data: timeReports, isLoading } = useQuery({
+  const { data: timeReports, isLoading: isLoadingReports } = useQuery({
     queryKey: ["time-reports"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("time_reports")
-        .select("*, project:projects(name)")
+        .select("*")
         .order("date", { ascending: false });
 
       if (error) throw error;
@@ -58,7 +60,7 @@ const TimeReportPage = () => {
     },
   });
 
-  const { data: projects } = useQuery({
+  const { data: projects, isLoading: isLoadingProjects } = useQuery({
     queryKey: ["projects"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -67,9 +69,15 @@ const TimeReportPage = () => {
         .eq("status", "active");
 
       if (error) throw error;
-      return data;
+      return data as Project[];
     },
   });
+
+  // Dapatkan mapping project untuk menampilkan nama project
+  const projectMap = projects?.reduce((acc, project) => {
+    acc[project.id] = project.name;
+    return acc;
+  }, {} as Record<string, string>) ?? {};
 
   const createTimeReportMutation = useMutation({
     mutationFn: async () => {
@@ -97,7 +105,7 @@ const TimeReportPage = () => {
     },
   });
 
-  if (isLoading) {
+  if (isLoadingReports || isLoadingProjects) {
     return (
       <div className="flex h-[calc(100vh-4rem)] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
@@ -205,7 +213,7 @@ const TimeReportPage = () => {
                     locale: id,
                   })}
                 </TableCell>
-                <TableCell>{report.project.name}</TableCell>
+                <TableCell>{projectMap[report.project_id] || "-"}</TableCell>
                 <TableCell>{report.hours_worked} jam</TableCell>
                 <TableCell>{report.description}</TableCell>
               </TableRow>
