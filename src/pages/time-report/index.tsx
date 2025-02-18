@@ -25,15 +25,15 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
-type TimeReport = {
+type TimeReportWithProject = {
   id: string;
   date: string;
   project_id: string;
   hours_worked: number;
   description: string;
-  project: {
+  projects: {
     name: string;
-  };
+  } | null;
 };
 
 type Project = {
@@ -56,17 +56,15 @@ const TimeReportPage = () => {
       const { data, error } = await supabase
         .from("time_reports")
         .select(`
-          id,
-          date,
-          project_id,
-          hours_worked,
-          description,
-          project:projects(name)
+          *,
+          projects (
+            name
+          )
         `)
         .order("date", { ascending: false });
 
       if (error) throw error;
-      return data as TimeReport[];
+      return data as TimeReportWithProject[];
     },
   });
 
@@ -217,7 +215,7 @@ const TimeReportPage = () => {
                     locale: id,
                   })}
                 </TableCell>
-                <TableCell>{report.project?.name || "-"}</TableCell>
+                <TableCell>{report.projects?.name || "-"}</TableCell>
                 <TableCell>{report.hours_worked} jam</TableCell>
                 <TableCell>{report.description}</TableCell>
               </TableRow>
